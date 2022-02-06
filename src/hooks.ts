@@ -1,4 +1,4 @@
-import * as cookie from 'cookie';
+import { parse } from 'cookie';
 import type { Handle, GetSession } from '@sveltejs/kit';
 import { query } from './routes/_db';
 import type { RequestEvent } from '@sveltejs/kit/types/hooks';
@@ -24,7 +24,7 @@ function deleteCookieIfNoUser(event: RequestEvent, response: Response) {
 // Invoked for each endpoint called and initially for SSR router
 export const handle: Handle = async ({ event, resolve }) => {
 	// before endpoint or page is called
-	const cookies = cookie.parse(event.request.headers.get('cookie') || '');
+	const cookies = parse(event.request.headers.get('cookie') || '');
 	if (cookies.session) {
 		await attachUserToRequest(cookies.session, event);
 	}
@@ -40,5 +40,14 @@ export const handle: Handle = async ({ event, resolve }) => {
 // an SPA with client-side routing that handles authentication seamlessly
 export const getSession: GetSession = (event: RequestEvent) => {
 	const u = event.locals['user'];
-	return u ? { user: u } : {};
+	return u
+		? {
+				user: {
+					// only include properties needed client-side —
+					// exclude anything else attached to the user
+					// like access tokens etc
+					email: u.email
+				}
+		  }
+		: {};
 };
